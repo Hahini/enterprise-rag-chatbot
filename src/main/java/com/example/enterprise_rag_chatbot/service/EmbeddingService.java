@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import java.util.List;
 import java.util.Map;
+import java.util.Arrays;
 
 @Service
 public class EmbeddingService {
@@ -29,4 +30,7 @@ public class EmbeddingService {
 
         return embedding;
     }
+    public String embeddingToString(float[] embedding) {
+    return Arrays.toString(embedding).replace(" ", "");
+}
 }

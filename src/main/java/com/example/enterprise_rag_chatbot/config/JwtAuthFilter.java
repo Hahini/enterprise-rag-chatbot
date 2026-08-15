@@ -22,28 +22,44 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     public JwtAuthFilter(JwtUtil jwtUtil) {
         this.jwtUtil = jwtUtil;
     }
-
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-            throws ServletException, IOException {
+protected void doFilterInternal(HttpServletRequest request,
+                                HttpServletResponse response,
+                                FilterChain filterChain)
+        throws ServletException, IOException {
 
-        String authHeader = request.getHeader("Authorization");
+    System.out.println("===== JWT FILTER =====");
+    System.out.println("Request URI: " + request.getRequestURI());
 
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
+    String authHeader = request.getHeader("Authorization");
+    System.out.println("Authorization Header: " + authHeader);
 
-            if (jwtUtil.isTokenValid(token)) {
-                String username = jwtUtil.extractUsername(token);
-                String role = jwtUtil.extractRole(token);
+    if (authHeader != null && authHeader.startsWith("Bearer ")) {
 
-                var authToken = new UsernamePasswordAuthenticationToken(
-                    username, null, List.of(new SimpleGrantedAuthority("ROLE_" + role))
-                );
+        String token = authHeader.substring(7);
+        System.out.println("Token: " + token);
 
-                SecurityContextHolder.getContext().setAuthentication(authToken);
-            }
+        boolean valid = jwtUtil.isTokenValid(token);
+        System.out.println("Is Token Valid? " + valid);
+
+        if (valid) {
+            String username = jwtUtil.extractUsername(token);
+            String role = jwtUtil.extractRole(token);
+
+            System.out.println("Username: " + username);
+            System.out.println("Role: " + role);
+
+            var authToken = new UsernamePasswordAuthenticationToken(
+                    username,
+                    null,
+                    List.of(new SimpleGrantedAuthority("ROLE_" + role))
+            );
+
+            SecurityContextHolder.getContext().setAuthentication(authToken);
+            System.out.println("Authentication Set");
         }
-
-        filterChain.doFilter(request, response);
     }
+
+    filterChain.doFilter(request, response);
+}
 }

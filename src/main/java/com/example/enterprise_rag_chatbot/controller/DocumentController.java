@@ -1,5 +1,7 @@
 package com.example.enterprise_rag_chatbot.controller;
 
+import com.example.enterprise_rag_chatbot.dto.SearchResult;
+import com.example.enterprise_rag_chatbot.entity.Chunk;
 import com.example.enterprise_rag_chatbot.service.DocumentIngestionService;
 import com.example.enterprise_rag_chatbot.service.EmbeddingService;
 import org.springframework.web.bind.annotation.*;
@@ -36,5 +38,34 @@ public class DocumentController {
 public String ingest(@RequestParam String filePath, @RequestParam String filename, @RequestParam String documentType) throws Exception {
     var document = ingestionService.ingestDocument(filePath, filename, documentType);
     return "Ingested document with ID: " + document.getId() + ", chunks: " + document.getChunks().size();
+}
+@PostMapping("/search")
+public List<SearchResult> search(
+        @RequestParam String question,
+        @RequestParam(defaultValue = "5") int topK) {
+
+    return ingestionService.searchSimilarChunks(question, topK);
+}
+@PostMapping("/hybrid-search")
+public List<SearchResult> hybridSearch(
+        @RequestParam String question,
+        @RequestParam(defaultValue = "5") int topK) {
+
+    return ingestionService.hybridSearch(question, topK);
+}
+@PostMapping("/search-reranked")
+public List<SearchResult> hybridSearchWithRerank(
+        @RequestParam String question,
+        @RequestParam(defaultValue = "5") int topK) {
+
+    return ingestionService.hybridSearchWithRerank(question, topK);
+}
+@PostMapping("/answer")
+public String answer(
+        @RequestParam String conversationId,
+        @RequestParam String question,
+        @RequestParam(defaultValue = "5") int topK) {
+
+    return ingestionService.answerQuestion(conversationId, question, topK);
 }
 }
