@@ -29,9 +29,11 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/users/register", "/api/users/login").permitAll()
-                .anyRequest().authenticated()
-            )
+    .requestMatchers("/api/users/register", "/api/users/login").permitAll()
+    .requestMatchers("/api/documents/ingest").hasRole("ADMIN")
+    .anyRequest().authenticated()
+)
+
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

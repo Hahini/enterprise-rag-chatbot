@@ -4,6 +4,8 @@ import com.example.enterprise_rag_chatbot.dto.SearchResult;
 import com.example.enterprise_rag_chatbot.entity.Chunk;
 import com.example.enterprise_rag_chatbot.service.DocumentIngestionService;
 import com.example.enterprise_rag_chatbot.service.EmbeddingService;
+import com.example.enterprise_rag_chatbot.service.PiiMaskingService;
+
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -13,12 +15,13 @@ public class DocumentController {
 
     private final DocumentIngestionService ingestionService;
     private final EmbeddingService embeddingService;
+    private final PiiMaskingService piiMaskingService;
 
-    public DocumentController(DocumentIngestionService ingestionService, EmbeddingService embeddingService) {
-        this.ingestionService = ingestionService;
-        this.embeddingService = embeddingService;
-    }
-
+   public DocumentController(DocumentIngestionService ingestionService, EmbeddingService embeddingService, PiiMaskingService piiMaskingService) {
+    this.ingestionService = ingestionService;
+    this.embeddingService = embeddingService;
+    this.piiMaskingService = piiMaskingService;
+}
     @PostMapping("/test-extract")
     public String testExtract(@RequestParam String filePath) throws Exception {
         return ingestionService.extractText(filePath);
@@ -64,8 +67,14 @@ public List<SearchResult> hybridSearchWithRerank(
 public String answer(
         @RequestParam String conversationId,
         @RequestParam String question,
-        @RequestParam(defaultValue = "5") int topK) {
+        @RequestParam(defaultValue = "5") int topK,
+        org.springframework.security.core.Authentication authentication) {
 
-    return ingestionService.answerQuestion(conversationId, question, topK);
+    String username = authentication.getName();
+    return ingestionService.answerQuestion(conversationId, username, question, topK);
+}
+@PostMapping("/test-mask")
+public String testMask(@RequestParam String text) {
+    return piiMaskingService.mask(text);
 }
 }

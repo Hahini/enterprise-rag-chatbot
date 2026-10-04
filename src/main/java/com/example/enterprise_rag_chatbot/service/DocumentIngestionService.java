@@ -5,11 +5,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.time.LocalDateTime;
 
 import com.example.enterprise_rag_chatbot.entity.Document;
 import com.example.enterprise_rag_chatbot.dto.SearchResult;
+import com.example.enterprise_rag_chatbot.entity.AuditLog;
 import com.example.enterprise_rag_chatbot.entity.Chunk;
+import com.example.enterprise_rag_chatbot.repository.AuditLogRepository;
 import com.example.enterprise_rag_chatbot.repository.ChunkRepository;
 import com.example.enterprise_rag_chatbot.repository.DocumentRepository;
 
@@ -22,16 +25,21 @@ public class DocumentIngestionService {
     private final RerankingService rerankingService;
     private final GenerationService generationService;
     private final ConversationMemoryService memoryService;
+    private final PiiMaskingService piiMaskingService;
+    private final AuditLogRepository auditLogRepository;
 
 
-    public DocumentIngestionService(DocumentRepository documentRepository, ChunkRepository chunkRepository, EmbeddingService embeddingService,  RerankingService rerankingService,GenerationService generationService, ConversationMemoryService memoryService) {
-    this.documentRepository = documentRepository;
-    this.chunkRepository = chunkRepository;
-    this.embeddingService = embeddingService;
-      this.rerankingService = rerankingService;
-      this.generationService = generationService;
-      this.memoryService = memoryService;
-}
+    public DocumentIngestionService(DocumentRepository documentRepository, ChunkRepository chunkRepository, EmbeddingService embeddingService, RerankingService rerankingService, GenerationService generationService, ConversationMemoryService memoryService, PiiMaskingService piiMaskingService, AuditLogRepository auditLogRepository) {
+        this.documentRepository = documentRepository;
+        this.chunkRepository = chunkRepository;
+        this.embeddingService = embeddingService;
+        this.rerankingService = rerankingService;
+        this.generationService = generationService;
+        this.memoryService = memoryService;
+        this.piiMaskingService = piiMaskingService;
+        this.auditLogRepository = auditLogRepository;
+    }
+
     public String extractText(String filePath) throws Exception {
         Path path = Path.of(filePath);
         String content = Files.readString(path);
@@ -161,13 +169,24 @@ private List<SearchResult> mergeResults(List<SearchResult> vectorResults, List<S
 
     return reranked.stream().limit(topK).toList();
 }
-public String answerQuestion(String conversationId, String question, int topK) {
+
+public String answerQuestion(String conversationId, String username, String question, int topK) {
+
+    System.out.println("User query (masked): " + piiMaskingService.mask(question));
+
     List<SearchResult> context = hybridSearchWithRerank(question, topK);
     List<ChatMessage> history = memoryService.getHistory(conversationId);
 
     String answer = generationService.generateAnswer(question, context, history);
 
     memoryService.addTurn(conversationId, question, answer);
+
+    String chunkIds = context.stream()
+            .map(r -> String.valueOf(r.id()))
+            .collect(Collectors.joining(","));
+
+    AuditLog log = new AuditLog(username, question, chunkIds, answer, LocalDateTime.now());
+    auditLogRepository.save(log);
 
     return answer;
 }
